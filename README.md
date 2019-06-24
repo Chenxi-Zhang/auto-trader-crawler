@@ -5,13 +5,13 @@
 
 ### 前期调研
 * 寻找url规律。通过观察，发现：
-* 1. 所有公开的二手车辆信息在子目录`/icon/${make}/${model}/[${province/city} || ${city/province}]/${carUID}`
-* 2. 车辆的信息在车辆页面`id=vdp-specs-content`的tag里，以<table> tag储存。
-* 3. 二手车信息的list在子目录`/cars/${make}`。
-* 4. 所有车辆`${make}`(品牌)在主页的`<optgroup label="All Makes">`tag里。
+1. 所有公开的二手车辆信息在子目录`/icon/${make}/${model}/[${province/city} || ${city/province}]/${carUID}`
+2. 车辆的信息在车辆页面`id=vdp-specs-content`的tag里，以<table> tag储存。
+3. 二手车信息的list在子目录`/cars/${make}`。
+4. 所有车辆`${make}`(品牌)在主页的`<optgroup label="All Makes">`tag里。
 * 爬取的思路很清晰：
-* 1. 先把品牌储存起来。
-* 2. 选定一个品牌，将`/cars/${make}`的所有子页面爬完。将数据以某种序列化方式储存起来。
+1. 先把品牌储存起来。
+2. 选定一个品牌，将`/cars/${make}`的所有子页面爬完。将数据以某种序列化方式储存起来。
 
 ### 开发经验
 * 底层简单封装，把需要用的库，类，以及方法进行简单的改写和组合。需要的方法包括：url的拼接、改写，对某url进行request访问，将response美化解析（BeautifulSoup4），对某个soup对象进行遍历某pattern的tag（比如<a>）的操作，数据序列化和反序列化。随着开发进行，更多的方法加入。
