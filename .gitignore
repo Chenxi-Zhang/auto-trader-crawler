@@ -1,3 +1,4 @@
 records/
 makes.txt
 .vscode/
+__pycache__/
