@@ -11,9 +11,9 @@ core/classes/__init__.py
 core/classes/carparser.py
 core/classes/carspider.py
 core/classes/makes.py
+core/classes/rabbitmq.py
 core/classes/spider.py
 core/classes/webviewer.py
 core/util/__init__.py
 core/util/base.py
-core/util/crawler_util.py
-core/util/parser.py
+core/util/rabbitmq.py

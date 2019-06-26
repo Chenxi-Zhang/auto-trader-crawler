@@ -3,3 +3,4 @@ makes.txt
 *.code-workspace
 .vscode/
 __pycache__/
+*test*
