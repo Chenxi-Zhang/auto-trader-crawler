@@ -31,13 +31,21 @@ class CarParser(WebViewer):
             self.soup = None
         spec_t = soup_find_tag(soup, 'div', {'id': 'vdp-specs-content'})
         price = soup_find_tag(soup, 'h2', {'class': 'vdp-hero-price'})
-        year = soup_find_tag(soup, 'meta', {'content': 3}).find_next('span', {'itemprop': 'name'})
         if not spec_t:
             print('not a car page')
             return None
         print('parsing car')
+        try:
+            brand = soup_find_tag(soup, 'meta', {'content': 1}).find_next('span', {'itemprop': 'name'})
+            model = brand.find_next('span', {'itemprop': 'name'})
+            year = model.find_next('span', {'itemprop': 'name'})
+        except Exception as e:
+            print(e)
+            print('problematic url :' + soup.url)
         res = dict()
         res['PRICE'] = price.string.strip() if price else 0
+        res['BRAND'] = brand.string if brand else ''
+        res['MODEL'] = model.string if model else ''
         res['YEAR'] = year.string if year else 0
         th = soup_tag_itr(spec_t, 'th')
         td = soup_tag_itr(spec_t, 'td')

@@ -76,12 +76,12 @@ class CarSpider(Spider):
         if car.is_car_page():
             return car
 
-    async def queue_all_car_url(self, queue):
+    async def queue_all_car_url(self, callback):
         async for url in self.get_all_href_visited_excluded_itr():
             url = self._url_validation(url)
             # car = CarParser(url)
-            queue.put(url)
-            print('Put url to url_queue: ' + url)
+            callback(url)
+            print('Return: ' + url)
 
     def _url_validation(self, url):
         if url.startswith('/') or url.startswith('#'):
@@ -92,78 +92,122 @@ class CarSpiderMultiThread(object):
     def __init__(self, spider, url_queue=None, car_response_queue=None, car_record_queue=None):
         self.spider = spider
         self.car_url_queue = url_queue if url_queue else Queue(2000)
-        self.load_car_url_finished = False
+        self.url_load_finished = False
         self.car_response_queue = car_response_queue if car_response_queue else Queue(2000)
-        self.load_car_response_finished = False
+        self.response_load_finished = False
         self.car_record_queue = car_record_queue if car_record_queue else Queue(2000)
-        self.load_car_record_finished = False
+        self.record_load_finished = False
 
-    def loading_cars(self, loader_func=None):
+    def loading_cars(self, callback=print, loader_func=None):
         if not loader_func:
             loader_func = self.spider.queue_all_car_url
         new_loop = asyncio.new_event_loop()
         asyncio.set_event_loop(new_loop)
         loop = asyncio.get_event_loop()
-        loop.run_until_complete(loader_func(self.car_url_queue))
-        self.load_car_url_finished = True
 
-    def is_load_car_url_finished(self):
-        return self.load_car_url_finished
+        loop.run_until_complete(loader_func(callback))
+        self.url_load_finished = True
 
-    def request_car(self, max_worker=32):
+    def is_url_load_finished(self):
+        return self.url_load_finished
+
+    def request_car(self, input_queue, max_worker=32, callback=print, finish_sign=None):
         new_loop = asyncio.new_event_loop()
         asyncio.set_event_loop(new_loop)
         loop = asyncio.get_event_loop()
-        while not self.load_car_url_finished or not self.car_url_queue.empty():
-            loop.run_until_complete(async_get_html_response(self.car_url_queue, self.car_response_queue, max_worker))
-        self.load_car_response_finished = True
+        # if not callback:
+        #     def _callback(data):
+        #         print(data)
+        #     callback = _callback
+        if not finish_sign:
+            finish_sign = self.is_url_load_finished
+        while not finish_sign() or not input_queue.empty():
+            loop.run_until_complete(async_get_html_response(input_queue, callback, max_worker))
+        self.response_load_finished = True
 
-    def is_load_car_info_finished(self):
-        return self.load_car_response_finished
+    def is_response_load_finished(self):
+        return self.response_load_finished
 
-    def parse_car_page(self):
+    def parse_car_page(self, input_queue=None, callback=print, finish_sign=None):
         car_parser = CarParser('')
-        while not self.load_car_response_finished or not self.car_response_queue.empty():
+        # if not callback:
+        #     callback = print
+        if not input_queue:
+            input_queue = self.car_url_queue
+        if not finish_sign:
+            finish_sign = self.is_response_load_finished
+        while not finish_sign() or not input_queue.empty():
             try:
-                resp = self.car_response_queue.get(timeout=3)
+                resp = input_queue.get(timeout=3)
                 if not resp:
                     continue
                 soup = bs_parse(resp)
                 record = car_parser.is_car_page(soup)
                 if not record:
                     continue
-                self.car_record_queue.put(record)
-            except:
-                pass
+                callback(record)
+                print('car parsed')
+            except Exception as e:
+                print(e)
 
-    def record_car_info(self, filepath):
+    def is_record_load_finished(self):
+        return self.record_load_finished
+
+    def write_car_info(self, filepath, input_queue, finish_sign=None):
+        if not finish_sign:
+            finish_sign = self.is_record_load_finished
         with open(filepath, 'w+') as f:
-            while not self.load_car_record_finished or not self.car_record_queue.empty():
-                try:
-                    record = self.car_record_queue.get(timeout=3)
-                    record = serialize_dict(record) + '\n'
-                    f.write(record)
-                    print("recording...")
-                except:
-                    pass
+            def _callback(data):
+                data = data + '\n'
+                f.write(data)
+                print('recording...')
+            self.record_car_info(input_queue, _callback, finish_sign)
+        #     while not finish_sign() or not input_queue.empty():
+        #         try:
+        #             record = input_queue.get(timeout=3)
+        #             record = serialize_dict(record) + '\n'
+        #             f.write(record)
+        #             print("recording...")
+        #         except:
+        #             pass
         # print('record write finished')
 
+    def record_car_info(self, input_queue, callback=print, finish_sign=None):
+        if not finish_sign:
+            finish_sign = self.is_record_load_finished
+        while not finish_sign() or not input_queue.empty():
+            try:
+                print('Try to record data')
+                record = input_queue.get(timeout=3)
+                callback(record)
+                print('Record successful')
+            except Exception as e:
+                print(e)
+
+
     def go(self, thread_num=4):
-        t_loading = Thread(target=self.loading_cars)
+        t_loading = Thread(target=self.loading_cars, args=(self.car_url_queue.put,))
         t_loading.start()
-        t_request = Thread(target=self.request_car, args=(128,))
+        t_request = Thread(target=self.request_car, args=(self.car_url_queue, 128, self.car_response_queue.put))
         t_request.start()
         threads = []
         for _ in range(thread_num):
-            t_parse = Thread(target=self.parse_car_page)
+            t_parse = Thread(target=self.parse_car_page, args=(self.car_response_queue, self.car_record_queue.put))
             threads.append(t_request)
             t_parse.start()
-        filepath = path.join(BASEDIR, 'records', self.spider.brand+'.txt')
-        t_writing = Thread(target=self.record_car_info, args=(filepath,))
+        filepath = path.join(BASEDIR, 'records', 'all-records.txt')
+        t_writing = Thread(target=self.write_car_info, args=(filepath, self.car_record_queue))
         t_writing.start()
         t_loading.join()
         t_request.join()
         for t in threads:
             t.join()
-        self.load_car_record_finished = True
+        self.record_load_finished = True
         t_writing.join()
+
+    def start_url_load(self, url_queue=None):
+        if not url_queue:
+            url_queue = self.car_url_queue
+        t_loading = Thread(target=self.loading_cars, args=(url_queue.put,))
+        t_loading.start()
+        return t_loading

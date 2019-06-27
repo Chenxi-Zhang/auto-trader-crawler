@@ -51,7 +51,9 @@ def get_html_response(url):
     '''
     headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/74.0.3729.169 Safari/537.36'}
     try:
+        print('Try request to: ' + url)
         response = requests.get(url, headers=headers)
+        response.url = url
     except Exception as e:
         print(e)
         response = None
@@ -60,12 +62,14 @@ def get_html_response(url):
 def queue_response_from_url(url, response_queue):
     response_queue.put(get_html_response(url))
 
-async def async_get_html_response(url_queue, response_queue, max_worker=32):
+async def async_get_html_response(url_queue, callback, max_worker=32):
     '''
     Core method to get multiple responses asynchronically
     '''
     urls = get_urls_from_queue(url_queue, max_worker)
     print('length of loaded url: ' + str(len(urls)))
+    if not urls:
+        return
     with cf.ThreadPoolExecutor(max_workers=max_worker) as executor:
         loop = asyncio.get_event_loop()
         futures = (
@@ -76,11 +80,13 @@ async def async_get_html_response(url_queue, response_queue, max_worker=32):
             ) for url in urls
         )
         for result in await asyncio.gather(*futures):
-            response_queue.put(result)
+            callback(result)
 
 async def async_get_html_response_itr(url_queue, max_worker=32):
     urls = get_urls_from_queue(url_queue, max_worker)
     print('length of loaded url: ' + str(len(urls)))
+    if not urls:
+        return
     with cf.ThreadPoolExecutor(max_workers=max_worker) as executor:
         loop = asyncio.get_event_loop()
         futures = (
@@ -124,7 +130,10 @@ def get_urls_from_queue(url_queue, num=1):
     urls = []
     try:
         for _ in range(num):
-            urls.append(url_queue.get(timeout=3))
+            url = url_queue.get(timeout=1)
+            if type(url) == bytes:
+                url = str(url, 'utf8')
+            urls.append(url)
     except:
         print('In async request, not enough url in url_queue')
     return urls
@@ -135,7 +144,9 @@ def bs_parse(response):
     :param response: response
     :return: soup
     '''
-    return bs(response.content, 'html5lib')
+    soup = bs(response.content, 'html.parser')
+    soup.url = response.url
+    return soup
 
 def soup_find_tag(soup, pattern, attr={}):
     '''
