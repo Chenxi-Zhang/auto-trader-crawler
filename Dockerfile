@@ -1,7 +1,11 @@
-FROM python:3.7.1
+FROM python:3.7.1-alpine
 
-COPY requirements.txt /
-RUN cd / && \
-    pip install -r requirements.txt
+RUN mkdir /workdir
+COPY requirements.txt /workdir
+COPY core /workdir/core
+COPY setup.py /workdir
+RUN cd /workdir && \
+    pip install -r requirements.txt && \
+    pip install -e .
 
-VOLUME /data
+WORKDIR /workdir/core
