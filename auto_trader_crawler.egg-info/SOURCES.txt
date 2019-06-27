@@ -6,7 +6,9 @@ auto_trader_crawler.egg-info/dependency_links.txt
 auto_trader_crawler.egg-info/top_level.txt
 core/__init__.py
 core/main.py
+core/recorder-main.py
 core/test.py
+core/worker-main.py
 core/classes/__init__.py
 core/classes/carparser.py
 core/classes/carspider.py
