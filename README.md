@@ -35,3 +35,11 @@
 ---
 ### 分布式扩展
 * 消息中间件。RabbitMQ。使用pika编程。
+* 使用AWS EC2云计算。使用docker-ce保持一致运行环境。
+* RabbitMQ远程访问时必须带上credentials，需要手动设置。
+* ConnectionResetError(104, 'Connection reset by peer')。解决办法为添加heartbeat，并在message_callback中启用新线程来处理数据。[例子](https://github.com/pika/pika/blob/0.12.0/examples/basic_consumer_threaded.py)。究其根本，是解析速度远小于大量异步request响应速度，如果url足够多，response队列会一直增长。如果为队列设置max_size，并且put阻塞，那么队列满后pika的channel会因为阻塞而失去heartbeat，进而关闭。而队列设置max_size并阻塞，是在考虑数据储存在RabbitMQ与储存在客户端内存中的平衡。消息肯定是储存在消息队列里最好。
+
+---
+### 总结
+* Docker好用。RabbitMQ好用。
+* 异步io，用callback处理数据。
