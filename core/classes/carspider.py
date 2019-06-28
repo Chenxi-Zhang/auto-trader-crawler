@@ -177,7 +177,7 @@ class CarSpiderMultiThread(object):
             finish_sign = self.is_record_load_finished
         while not finish_sign() or not input_queue.empty():
             try:
-                print('Try to record data')
+                # print('Try to record data')
                 record = input_queue.get(timeout=3)
                 callback(record)
                 print('Record successful')

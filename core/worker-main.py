@@ -13,8 +13,13 @@ from core.classes.rabbitmq import (
 from core.util.base import serialize_dict
 
 def receive_url(url_queue, ip, port, ch_queue_name):
-    with open_mq_worker(url_queue, ip, port, ch_queue_name) as mq:
-        mq.start_receive()
+    while 1:
+        with open_mq_worker(url_queue, ip, port, ch_queue_name) as mq:
+            try:
+                mq.start_receive()
+            except ConnectionResetError as e:
+                print(e)
+                continue
 
 def send_data(data_queue, ip, port, ch_queue_name):
     with open_mq_sender(data_queue, ip, port, ch_queue_name) as mq:
@@ -30,9 +35,9 @@ def main():
         return
     ip, port = sys.argv[1], sys.argv[2]
     thread_num = 4
-    url_queue = Queue(2000)
-    response_queue = Queue(2000)
-    car_record_queue = Queue(2000)
+    url_queue = Queue()
+    response_queue = Queue()
+    car_record_queue = Queue()
     spider = CarSpiderMultiThread(None, url_queue=url_queue, car_response_queue=response_queue, car_record_queue=car_record_queue)
     t_receive = Thread(target=receive_url, args=(url_queue, ip, port, URL_QUEUE_NAME))
     t_receive.start()
@@ -51,8 +56,6 @@ def main():
     for t_parse in threads_parse:
         t_parse.join()
     t_send.join()
-
-
 
 if __name__ == "__main__":
     main()

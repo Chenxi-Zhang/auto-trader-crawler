@@ -32,8 +32,15 @@ class MQbase(object):
         self.channel.close()
         self.conn.close()
 
+    def reconnect(self):
+        if self.channel.is_open:
+            self.channel.close()
+        if self.conn.is_open:
+            self.conn.close()
+        self.__enter__()
+
     def send_msg(self, msg):
-        print('MQ: message sending...')
+        # print('MQ: message sending...')
         send(self.channel, msg, self.queue_name)
         print('MQ: send successful')
 
@@ -71,6 +78,8 @@ class MQSender(MQbase):
                     data = data_serializer(data)
                 if type(data) == str:
                     data = data.encode('utf8')
+                if self.channel.is_closed:
+                    self.reconnect()
                 self.send_msg(data)
             except Exception as e:
                 print(e)

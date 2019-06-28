@@ -23,7 +23,6 @@ def main():
     for brand, num in make.items():
         url_queue = Queue(2000)
         spider = CarSpider(brand, num)
-        url_queue.put(1)
         c = CarSpiderMultiThread(spider)
         t = c.start_url_load(url_queue)
         with open_mq_sender(url_queue, ip, port, queue_name=URL_QUEUE_NAME) as sender:

@@ -51,7 +51,7 @@ def get_html_response(url):
     '''
     headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/74.0.3729.169 Safari/537.36'}
     try:
-        print('Try request to: ' + url)
+        # print('Try request to: ' + url)
         response = requests.get(url, headers=headers)
         response.url = url
     except Exception as e:

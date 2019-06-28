@@ -13,7 +13,8 @@ def connect_to(ip_addr, port=None, credentials=None):
         ip_addr,
         port,
         '/',
-        credentials=credentials))
+        credentials=credentials,
+        heartbeat=5))
     return connection
 
 def send(channel, msg, router, exchange=''):

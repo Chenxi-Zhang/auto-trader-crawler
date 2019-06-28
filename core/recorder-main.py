@@ -21,7 +21,7 @@ def main():
         return
     ip, port = sys.argv[1], sys.argv[2]
     filepath = path.join(BASEDIR, 'records', 'all-records.txt')
-    data_queue = Queue(2000)
+    data_queue = Queue()
     spider = CarSpiderMultiThread(None, url_queue=data_queue)
     t_write = Thread(target=spider.write_car_info, args=(filepath, data_queue, lambda :False))
     t_write.start()
